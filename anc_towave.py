@@ -6,6 +6,7 @@ import wave
 #declare variables
 
 record_secs=10
+
 form_1 = pyaudio.paInt16
 # Size of each read-in chunk
 CHUNK = 1042
@@ -56,19 +57,24 @@ for i in range(0, int((SAMPLE_RATE/CHUNK)*record_secs)):
     
     #read from reference microphone
     reference = stream.read(CHUNK, exception_on_overflow=False)
+    # read from error microphone
     error = stream2.read(CHUNK, exception_on_overflow=False)
-    frames.append(error)
+
+    #ff controller
     intwave = np.frombuffer(reference, np.int16)
     intwave = np.invert(intwave)*0.6
     intwave = intwave.astype(np.int16)
     ffed = np.frombuffer(intwave, np.byte)
-    form_1 = pyaudio.paInt16
+
+    #fb controller
     intwav = np.fromstring(error, np.int16)
     M.append(intwav)
     intwav = KI*intwav+M[k-1]+KP*(intwav-E[k-1])
     E.append(intwav)
     intwav=intwav.astype(np.int16)
     fbed = np.frombuffer(intwav, np.byte)
+
+    #read the sum on the speakers
     stream.write(ffed+fbed, CHUNK)
 
 stream.stop_stream()
@@ -79,7 +85,7 @@ stream2.close()
 
 pa.terminate()
 
-print(np.average(np.absolute(np.average(np.absolute(M)))))
+
 wavefile = wave.open('error.wav','wb')
 wavefile.setnchannels(CHANNELS)
 wavefile.setsampwidth(pa.get_sample_size(form_1))
